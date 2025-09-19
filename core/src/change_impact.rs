@@ -3,7 +3,7 @@ use serde::Serialize;
 use std::path::PathBuf;
 use crate::relation::{Relation, RelationTarget, LinkType};
 use crate::error::ReqvireError;
-use crate::element_registry;
+use crate::graph_registry::{self, ElementNode, RelationNode};
 use crate::relation;
 use crate::element;
 use difference::{Changeset, Difference};
@@ -41,7 +41,7 @@ pub struct AddedElement {
     pub name: String,
     pub new_content: String,
     pub added_relations: Vec<RelationSummary>,
-    pub change_impact_tree: element_registry::ElementNode,
+    pub change_impact_tree: ElementNode,
 }
 
 /// Report for an element that has been removed (only in the reference registry).
@@ -70,7 +70,7 @@ pub struct ChangedElement {
     pub content_changed: bool,
     pub added_relations: Vec<RelationSummary>,
     pub removed_relations: Vec<RelationSummary>,
-    pub change_impact_tree: element_registry::ElementNode,
+    pub change_impact_tree: ElementNode,
 }
 
 impl ChangedElement {
@@ -338,7 +338,7 @@ fn _generate_markdown_diff(old: &str, new: &str) -> String {
 
 /// Render the change impact tree recursively with GitHub links.
 fn render_change_impact_tree(
-    node: &element_registry::ElementNode,
+    node: &ElementNode,
     indent: usize,
     base_url: &str,
     git_commit: &str,
@@ -373,7 +373,7 @@ fn render_change_impact_tree(
 
 /// Render the change impact tree recursively as structured JSON with GitHub URLs.
 fn render_change_impact_tree_json(
-    node: &element_registry::ElementNode,
+    node: &ElementNode,
     base_url: &str,
     git_commit: &str,
 ) -> Vec<Value> {
@@ -411,15 +411,14 @@ fn convert_relation_to_summary(rel: &Relation) -> RelationSummary {
 
 /// Builds the change impact tree recursively using `ElementNode` and keeps only forward relations.
 pub fn build_change_impact_tree(
-    current: &element_registry::ElementRegistry,
+    current: &graph_registry::GraphRegistry,
     element_id: String,
     visited: &mut BTreeSet<String>,
     fallback_name: Option<String>,
-) -> element_registry::ElementNode {
+) -> ElementNode {
     // Fetch the current element or generate a placeholder
     let element = current
-        .elements
-        .get(&element_id)
+        .get_element(&element_id)
         .cloned()
         .unwrap_or_else(|| {
             let display_name = fallback_name.unwrap_or_else(|| "Missing Element".to_string());
@@ -442,7 +441,7 @@ pub fn build_change_impact_tree(
             if !visited.insert(impacted_id.clone()) {
                 return None;
             }
-    
+
             // Use the text from the first relation as a fallback display name
             let fallback_name = rels.first().map(|rel| rel.target.text.clone());
             let child_node = build_change_impact_tree(
@@ -455,7 +454,7 @@ pub fn build_change_impact_tree(
             let forward_relations: Vec<_> = rels
                 .into_iter()
                 .filter(|rel| relation::IMPACT_PROPAGATION_RELATIONS.contains(&rel.relation_type.name))
-                .map(|rel| element_registry::RelationNode {
+                .map(|rel| RelationNode {
                     relation_trigger: rel.relation_type.name.to_string(),
                     element_node: child_node.clone(),
                 })
@@ -468,19 +467,19 @@ pub fn build_change_impact_tree(
         })
         .flatten()
         .collect();
-    element_registry::ElementNode {
+    ElementNode {
         element,
         relations,
     }
 }
 
 fn collect_verification_elements_from_impact_tree(
-    node: &element_registry::ElementNode,
+    node: &ElementNode,
 ) -> Vec<InvalidatedVerification> {
     let mut collected = Vec::new();
     let mut seen = HashSet::new();
     fn walk(
-        node: &element_registry::ElementNode,
+        node: &ElementNode,
         seen: &mut HashSet<String>,
         collected: &mut Vec<InvalidatedVerification>,
     ) {
@@ -503,7 +502,7 @@ fn collect_verification_elements_from_impact_tree(
 }
 
 fn propagate_changed_flags(
-    node: &mut element_registry::ElementNode,
+    node: &mut ElementNode,
     changed_ids: &HashSet<String>,
 ) {
     for relation in &mut node.relations {
@@ -518,7 +517,7 @@ fn propagate_changed_flags(
 
 pub fn apply_smart_filtering(
     report: &mut ChangeImpactReport,
-    _current: &element_registry::ElementRegistry,
+    _current: &graph_registry::GraphRegistry,
 ) {
     // Step 1: Collect ALL added element IDs BEFORE filtering
 
@@ -544,7 +543,7 @@ pub fn apply_smart_filtering(
 }
 
 fn collect_tree_ids_recursively(
-    node: &element_registry::ElementNode,
+    node: &ElementNode,
     set: &mut HashSet<String>,
 ) {
     // Insert this node's identifier
@@ -560,17 +559,17 @@ fn collect_tree_ids_recursively(
 
 
 pub fn compute_change_impact(
-    current: &element_registry::ElementRegistry,
-    reference: &element_registry::ElementRegistry,
+    current: &graph_registry::GraphRegistry,
+    reference: &graph_registry::GraphRegistry,
 ) -> Result<ChangeImpactReport, ReqvireError> {
     let mut report = ChangeImpactReport::new();
-    let current_ids: HashSet<&String> = current.elements.keys().collect();
-    let reference_ids: HashSet<&String> = reference.elements.keys().collect();
+    let current_ids: HashSet<String> = current.get_all_elements().iter().map(|e| e.identifier.clone()).collect();
+    let reference_ids: HashSet<String> = reference.get_all_elements().iter().map(|e| e.identifier.clone()).collect();
    
     // Process elements present in both registries.
     for id in current_ids.intersection(&reference_ids) {
-        let cur_elem = &current.elements[*id];
-        let ref_elem = &reference.elements[*id];
+        let cur_elem = current.get_element(id).unwrap();
+        let ref_elem = reference.get_element(id).unwrap();
         let content_changed = cur_elem.hash_impact_content != ref_elem.hash_impact_content;
        
         // Only track changes to relations that propagate impact according to specifications
@@ -593,11 +592,11 @@ pub fn compute_change_impact(
         let has_changed = content_changed || !added_relations.is_empty() || !removed_relations.is_empty();
         if has_changed {
             let mut visited = BTreeSet::new();
-            visited.insert((*id).clone());
-            let change_impact_tree = build_change_impact_tree(current, (*id).to_string(), &mut visited,None);
-                          
+            visited.insert(id.clone());
+            let change_impact_tree = build_change_impact_tree(current, id.to_string(), &mut visited,None);
+
             report.changed.push(ChangedElement {
-                element_id: (*id).clone(),
+                element_id: id.clone(),
                 name: cur_elem.name.clone(),
                 old_content: ref_elem.content.clone(),
                 new_content: cur_elem.content.clone(),
@@ -610,7 +609,7 @@ pub fn compute_change_impact(
     }
     // Process added elements (present only in current registry).
     for id in current_ids.difference(&reference_ids) {
-        let cur_elem = &current.elements[*id];
+        let cur_elem = current.get_element(id).unwrap();
         let added_relations: Vec<_> = cur_elem
             .relations
             .iter()
@@ -619,10 +618,10 @@ pub fn compute_change_impact(
             .map(|rel: Relation| convert_relation_to_summary(&rel))
             .collect();
         let mut visited = BTreeSet::new();
-        visited.insert((*id).clone());
-        let change_impact_tree = build_change_impact_tree(current, (*id).to_string(), &mut visited, None);
+        visited.insert(id.clone());
+        let change_impact_tree = build_change_impact_tree(current, id.to_string(), &mut visited, None);
         report.added.push(AddedElement {
-            element_id: (*id).clone(),
+            element_id: id.clone(),
             name: cur_elem.name.clone(),
             new_content: cur_elem.content.clone(),
             added_relations,
@@ -631,7 +630,7 @@ pub fn compute_change_impact(
     }
     // Process removed elements (present only in reference registry).
     for id in reference_ids.difference(&current_ids) {
-        let ref_elem = &reference.elements[*id];
+        let ref_elem = reference.get_element(id).unwrap();
         let removed_relations: Vec<_> = ref_elem
             .relations
             .iter()
@@ -639,7 +638,7 @@ pub fn compute_change_impact(
             .map(|rel: Relation| convert_relation_to_summary(&rel))
             .collect();
         report.removed.push(RemovedElement {
-            element_id: (*id).clone(),
+            element_id: id.clone(),
             name: ref_elem.name.clone(),
             old_content: ref_elem.content.clone(),
             removed_relations,
@@ -685,9 +684,9 @@ pub fn compute_change_impact(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ElementRegistry;
     use crate::element::Element;
     use crate::relation::{RelationTypeInfo, Relation, RelationTarget, ArrowDirection};
+    use crate::GraphRegistry;
    
     /// Helper function to create a simple element.
     fn create_element(identifier: &str, name: &str, content: &str) -> Element {
@@ -716,7 +715,7 @@ mod tests {
        
     #[test]
     fn test_build_change_impact_tree() {
-        let mut my_struct = ElementRegistry::new();
+        let mut my_struct = GraphRegistry::new();
         let element_a = create_element("A", "Element A", "Content A");
         let mut element_b = create_element("B", "Element B", "Content B");
         // Define a forward relation from B to A.
@@ -732,14 +731,12 @@ mod tests {
             },
             "A",
         );
-        my_struct.elements.insert("A".to_string(), element_a.clone());
-        my_struct.elements.insert("B".to_string(), element_b.clone());
+        my_struct.register_element(element_a.clone(), "file.md").unwrap();
+        my_struct.register_element(element_b.clone(), "file.md").unwrap();
         let mut visited = BTreeSet::new();
         visited.insert("B".to_string());
         let tree = build_change_impact_tree(
-            &ElementRegistry {
-                elements: my_struct.elements.clone(),
-            },
+            &my_struct,
             "B".to_string(),
             &mut visited,
             None
@@ -755,7 +752,7 @@ mod tests {
     }
     #[test]
     fn test_tree_with_cycle() {
-        let mut my_struct = ElementRegistry::new();
+        let mut my_struct = GraphRegistry::new();
         let mut element_a = create_element("A", "Element A", "Content A");
         let mut element_b = create_element("B", "Element B", "Content B");
         // Create a cycle: A -> B -> A.
@@ -783,14 +780,12 @@ mod tests {
             },
             "A",
         );
-        my_struct.elements.insert("A".to_string(), element_a.clone());
-        my_struct.elements.insert("B".to_string(), element_b.clone());
+        my_struct.register_element(element_a.clone(), "file.md").unwrap();
+        my_struct.register_element(element_b.clone(), "file.md").unwrap();
         let mut visited = BTreeSet::new();
         visited.insert("A".to_string());
         let tree = build_change_impact_tree(
-            &ElementRegistry {
-                elements: my_struct.elements.clone(),
-            },
+            &my_struct,
             "A".to_string(),
             &mut visited,
             None
@@ -822,7 +817,7 @@ mod tests {
     #[test]
     fn test_smart_filtering_with_parent_child_requirements() {
         // Create current registry with parent and child requirements both added
-        let mut current_registry = ElementRegistry::new();
+        let mut current_registry = GraphRegistry::new();
        
         // Create parent requirement with forward relations
         let mut parent_req = create_element("req1.md#parent-requirement", "Parent Requirement", "Parent content");
@@ -900,12 +895,12 @@ mod tests {
             user_created: false,  // Auto-generated opposite relations
         });
        
-        current_registry.elements.insert("req1.md#parent-requirement".to_string(), parent_req);
-        current_registry.elements.insert("req1.md#child-requirement".to_string(), child_req);
-        current_registry.elements.insert("verify.md#parent-verification".to_string(), verification);
+        current_registry.register_element(parent_req, "req1.md").unwrap();
+        current_registry.register_element(child_req, "req1.md").unwrap();
+        current_registry.register_element(verification, "verify.md").unwrap();
        
         // Create empty reference registry (all elements are new)
-        let reference_registry = ElementRegistry::new();
+        let reference_registry = GraphRegistry::new();
        
         // Compute change impact
         let report = compute_change_impact(&current_registry, &reference_registry).unwrap();
@@ -924,7 +919,7 @@ mod tests {
     #[test]
     fn test_smart_filtering_with_requirement_and_verification() {
         // Create current registry with a requirement and its verification both added
-        let mut current_registry = ElementRegistry::new();
+        let mut current_registry = GraphRegistry::new();
        
         // Create requirement with verifiedBy relation
         let mut requirement = create_element("req.md#new-requirement", "New Requirement", "Requirement content");
@@ -969,11 +964,11 @@ mod tests {
             user_created: false,  // Auto-generated opposite relations
         });
        
-        current_registry.elements.insert("req.md#new-requirement".to_string(), requirement);
-        current_registry.elements.insert("verify.md#new-verification".to_string(), verification);
+        current_registry.register_element(requirement, "req.md").unwrap();
+        current_registry.register_element(verification, "verify.md").unwrap();
        
         // Create empty reference registry (all elements are new)
-        let reference_registry = ElementRegistry::new();
+        let reference_registry = GraphRegistry::new();
        
 
         // Compute change impact

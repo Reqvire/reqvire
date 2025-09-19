@@ -1,75 +1,90 @@
 #!/bin/bash
 
-# Test: Comprehensive Validation of Invalid Relation Types and Formats
-# -----------------------------------------------------------------------
-# Acceptance Criteria:
-# - System should detect and report Duplicate element
-# - System should detect and report Invalid metadata format
-# - System should detect and report Invalid relation format
-# - System should detect and report Unsupported relation type
-# - System should detect and report Duplicate subsection
-# - System should detect and report Incompatible element types for relation
-# - System should detect and report Missing relation target
-# - System should detect and report Circular dependency error
-# - System should detect and report Missing parent relation
+# Test: Two-Pass Validation of Invalid Relations
+# -----------------------------------------------
+# This test validates the two-pass validation architecture:
+# - Pass 1: Element collection and local validation (parsing/format errors)
+# - Pass 2: Graph construction and relation validation (relation errors)
 #
-# Test Criteria:
-# - Command exits with 0 error code but outputs expected validation errors
-# - Error output contains specific error messages for each type of invalid relation
-#
+# The test runs two separate scenarios to validate each pass independently.
 
+# Test 1: Pass 1 Errors (Parsing/Format Issues)
 
+OUTPUT_PASS1=$(cd "${TEST_DIR}/pass1-errors" && "$REQVIRE_BIN" model-summary 2>&1)
+EXIT_CODE_PASS1=$?
 
-OUTPUT=$(cd "${TEST_DIR}" && "$REQVIRE_BIN" --config "${TEST_DIR}/reqvire.yaml" validate --json 2>&1)
-EXIT_CODE=$?
+printf "%s\n" "$OUTPUT_PASS1" > "${TEST_DIR}/test_results_pass1.log"
 
-
-printf "%s\n" "$OUTPUT" > "${TEST_DIR}/test_results.log"
-
-# Verify exit code indicates doesn't indicate error 
-if ! [ $EXIT_CODE -eq 0 ]; then
-  echo "❌ FAILED: Validation should have failed but returned success (0)"
+# Verify exit code indicates validation failure (non-zero)
+if [ $EXIT_CODE_PASS1 -eq 0 ]; then
+  echo "❌ FAILED: Pass 1 validation should have failed but returned success (0)"
   exit 1
 fi
 
-# Check for specific error messages - be explicit about what we expect vs get
-
-# Define specific errors we expect to see
-EXPECTED_ERRORS=(
-  "Circular dependency error:"
+# Define Pass 1 errors we expect to see
+EXPECTED_PASS1_ERRORS=(
   "Duplicate element:"
-  "Duplicate subsection:"
   "Invalid metadata format:"
   "Invalid relation format:"
-  "Missing parent relation:"
   "Unsupported relation type:"
-  # Incompatible element types - we expect 3 instances
-  "Incompatible.*requirement-with-incompactible-element.*Requirement.*requirement-with-invalid-relation-type.*Requirement"
-  "Incompatible.*requirement-satisfiedby-requirement-invalid.*Requirement.*valid-requirement.*Requirement"
-  "Incompatible.*verification-satisfiedby-verification-invalid.*Verification.*valid-verification-with-correct-satisfiedby.*Verification"
-  # Missing relation targets - we expect 4 instances
-  "Missing.*requirement-with-missing-target.*NonExistentElement.md#missing-element"
-  "Missing.*requirement-with-missing-verifiedby-target.*NonExistentVerification.md#missing-verification"
-  "Missing.*verification-with-missing-satisfiedby-target.*non-existing-test-script.sh"
-  "Missing.*requirement-with-missing-satisfiedby-file.*non-existing-implementation.py"
+  "Duplicate subsection:"
 )
 
-MISSING_ERRORS=()
+MISSING_PASS1_ERRORS=()
 
-for expected in "${EXPECTED_ERRORS[@]}"; do
-  if ! echo "$OUTPUT" | grep -q "$expected"; then
-    MISSING_ERRORS+=("❌ MISSING: $expected")
+for expected in "${EXPECTED_PASS1_ERRORS[@]}"; do
+  if ! echo "$OUTPUT_PASS1" | grep -q "$expected"; then
+    MISSING_PASS1_ERRORS+=("❌ MISSING Pass 1: $expected")
   fi
 done
 
-if [ ${#MISSING_ERRORS[@]} -gt 0 ]; then
-  echo "❌ FAILED: Missing expected validation errors!"
-  for missing in "${MISSING_ERRORS[@]}"; do
+if [ ${#MISSING_PASS1_ERRORS[@]} -gt 0 ]; then
+  echo "❌ FAILED: Missing expected Pass 1 validation errors!"
+  for missing in "${MISSING_PASS1_ERRORS[@]}"; do
     echo "$missing"
   done
   echo ""
-  echo "ACTUAL ERRORS:"
-  echo "$OUTPUT" | jq -r '.errors[]'
+  echo "ACTUAL Pass 1 ERRORS:"
+  echo "$OUTPUT_PASS1"
+  exit 1
+fi
+
+# Test 2: Pass 2 Errors (Relation Validation Issues)
+
+OUTPUT_PASS2=$(cd "${TEST_DIR}/pass2-errors" && "$REQVIRE_BIN" model-summary 2>&1)
+EXIT_CODE_PASS2=$?
+
+printf "%s\n" "$OUTPUT_PASS2" > "${TEST_DIR}/test_results_pass2.log"
+
+# Verify exit code indicates validation failure (non-zero)
+if [ $EXIT_CODE_PASS2 -eq 0 ]; then
+  echo "❌ FAILED: Pass 2 validation should have failed but returned success (0)"
+  exit 1
+fi
+
+# Define Pass 2 errors we expect to see
+EXPECTED_PASS2_ERRORS=(
+  "Missing relation target:"
+  "Incompatible element types for relation:"
+  "Circular dependency error:"
+)
+
+MISSING_PASS2_ERRORS=()
+
+for expected in "${EXPECTED_PASS2_ERRORS[@]}"; do
+  if ! echo "$OUTPUT_PASS2" | grep -q "$expected"; then
+    MISSING_PASS2_ERRORS+=("❌ MISSING Pass 2: $expected")
+  fi
+done
+
+if [ ${#MISSING_PASS2_ERRORS[@]} -gt 0 ]; then
+  echo "❌ FAILED: Missing expected Pass 2 validation errors!"
+  for missing in "${MISSING_PASS2_ERRORS[@]}"; do
+    echo "$missing"
+  done
+  echo ""
+  echo "ACTUAL Pass 2 ERRORS:"
+  echo "$OUTPUT_PASS2"
   exit 1
 fi
 

@@ -5,18 +5,16 @@ Reqvire is an AI-driven framework for system modeling and requirements managemen
 ## Building and Running Reqvire
 - Build: `cargo build`
 - Run with HTML output: `cargo run -- specifications output --html`
-- Run specific commands: `cargo run -- --validate` or `./target/debug/reqvire --validate`
+- Run specific commands: `cargo run -- format` or `./target/debug/reqvire format`
 - Test: `cargo test`
 - Test specific: `cargo test <test_name>`
 - Lint: `cargo clippy -- -D warnings`
 - Format: `cargo fmt`
 
 ## Core Commands
-- Validate requirements: `./target/debug/reqvire validate`
-- Validate with JSON output: `./target/debug/reqvire validate --json > /tmp/validation.json`
 - Generate HTML documentation: `./target/debug/reqvire html`
-- Lint requirements (preview only): `./target/debug/reqvire lint --dry-run`
-- Apply linting fixes: `./target/debug/reqvire lint`
+- Format requirements (preview only): `./target/debug/reqvire format --dry-run`
+- Apply formatting: `./target/debug/reqvire format`
 - Generate diagrams: `./target/debug/reqvire generate-diagrams`
 - Generate model summary: `./target/debug/reqvire model-summary --json > /tmp/model-summary.json`
 

@@ -173,9 +173,9 @@ To maintain **consistency**, **traceability**, and **quality** in **reqvire**, w
      - Verifications ensure that **requirements** are linked to **tests**, and all features are properly validated.
 
 5. **Test Your Changes**:
-   - Run **reqvire validation** locally to ensure your requirements and verifications are consistent:
+   - Run **reqvire commands** locally to ensure your requirements and verifications are consistent:
      ```bash
-     reqvire --validate
+     reqvire format
      ```
    - Ensure that your code passes **all tests** and that **no existing functionality breaks**.
 

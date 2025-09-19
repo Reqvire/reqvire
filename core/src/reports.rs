@@ -1,5 +1,5 @@
 use crate::element;
-use crate::element_registry::ElementRegistry;
+use crate::graph_registry::GraphRegistry;
 use serde::Serialize;
 use std::collections::HashMap;
 use crate::error::ReqvireError;
@@ -129,11 +129,16 @@ struct Summary {
 #[derive(Serialize)]
 struct FileSummary {
     sections: HashMap<String, SectionSummary>,
+    page_content: Option<String>,
+    total_sections: usize,
+    total_elements: usize,
 }
 
 #[derive(Serialize)]
 struct SectionSummary {
     elements: Vec<ElementSummary>,
+    section_content: Option<String>,
+    element_count: usize,
 }
 
 #[derive(Serialize)]
@@ -166,6 +171,8 @@ struct TargetSummary {
 #[derive(Serialize, Default)]
 struct GlobalCounters {
     total_elements: usize,
+    total_files: usize,
+    total_sections: usize,
 
     // Requirements by type
     total_requirements_system: usize,
@@ -189,7 +196,7 @@ pub enum SummaryOutputFormat {
 }
 
 pub fn print_registry_summary(
-    registry: &ElementRegistry,
+    registry: &GraphRegistry,
     output_format: SummaryOutputFormat,
     filters: &Filters,
 ) {
@@ -212,13 +219,13 @@ pub fn print_registry_summary(
 
 
 fn build_summary(
-    registry: &ElementRegistry,
+    registry: &GraphRegistry,
     filters: &Filters,
 ) -> Summary {
     let mut files: HashMap<String, FileSummary> = HashMap::new();
     let mut counters = GlobalCounters::default();
 
-    for elem in registry.elements.values() {
+    for elem in registry.get_all_elements() {
         // Apply filters
         if !filters.matches(elem) {
             continue;
@@ -294,11 +301,53 @@ fn build_summary(
 
         // Insert into nested file→section map
         files.entry(elem.file_path.clone())
-            .or_insert_with(|| FileSummary { sections: HashMap::new() })
+            .or_insert_with(|| FileSummary {
+                sections: HashMap::new(),
+                page_content: None,
+                total_sections: 0,
+                total_elements: 0,
+            })
             .sections.entry(elem.section.clone())
-            .or_insert_with(|| SectionSummary { elements: Vec::new() })
+            .or_insert_with(|| SectionSummary {
+                elements: Vec::new(),
+                section_content: Some(String::new()),
+                element_count: 0,
+            })
             .elements.push(es);
     }
+
+    // Add page content and calculate counts
+    for (file_path, file_summary) in &mut files {
+        // Get page content
+        if let Some(page) = registry.pages.get(file_path) {
+            file_summary.page_content = Some(page.frontmatter_content.clone());
+        }
+
+        // Get section content and calculate counts
+        for (section_name, section_summary) in &mut file_summary.sections {
+            // Get section content
+            let section_key = crate::graph_registry::SectionKey::new(
+                file_path.clone(),
+                section_name.clone()
+            );
+            if let Some(section) = registry.sections.get(&section_key) {
+                section_summary.section_content = Some(section.content.clone());
+            }
+
+            // Calculate element count for this section
+            section_summary.element_count = section_summary.elements.len();
+        }
+
+        // Calculate file-level counts
+        file_summary.total_sections = file_summary.sections.len();
+        file_summary.total_elements = file_summary.sections.values()
+            .map(|s| s.elements.len())
+            .sum();
+    }
+
+    // Calculate global counts
+    counters.total_files = files.len();
+    counters.total_sections = registry.sections.len();
 
     Summary {
         files,
@@ -370,9 +419,28 @@ fn escape(s: &str) -> String {
 fn print_summary_text(summary: &Summary) {
     println!("--- MBSE Model summary ---");
     for (file, fsum) in &summary.files {
-        println!("📂 File: {}", file);
+        println!("📂 File: {} (sections: {}, elements: {})",
+                 file, fsum.total_sections, fsum.total_elements);
+
+        // Show page content if available
+        if let Some(page_content) = &fsum.page_content {
+            if !page_content.trim().is_empty() {
+                println!("  📄 Page content: {:?}", page_content);
+                println!();
+            }
+        }
+
         for (sec, ssum) in &fsum.sections {
-            println!("  📖 Section: {}", sec);
+            println!("  📖 Section: {} (elements: {})", sec, ssum.element_count);
+
+            // Show section content if available
+            if let Some(section_content) = &ssum.section_content {
+                if !section_content.trim().is_empty() {
+                    println!("    📝 Section content: {:?}", section_content);
+                    println!();
+                }
+            }
+
             for e in &ssum.elements {
                 println!("    🔹 Element: {}", e.identifier);
                 println!("      - Name: {}", e.name);
@@ -398,13 +466,20 @@ fn print_summary_text(summary: &Summary) {
 
     let c = &summary.global_counters;
     println!("------------------------------------");
+    println!("📊 Summary Counts:");
+    println!("Total files: {}", c.total_files);
+    println!("Total sections: {}", c.total_sections);
     println!("Total elements: {}", c.total_elements);
-    println!("Total System Requirements: {}", c.total_requirements_system);
-    println!("Total User Requirements: {}", c.total_requirements_user);
-    println!("Total Verifications (Test): {}", c.total_verifications_test);
-    println!("TotalVerifications (Analysis): {}", c.total_verifications_analysis);
-    println!("TotalVerifications (Inspection): {}", c.total_verifications_inspection);
-    println!("TotalVerifications (Demonstration): {}", c.total_verifications_demonstration);
+    println!();
+    println!("📋 Element Types:");
+    println!("System Requirements: {}", c.total_requirements_system);
+    println!("User Requirements: {}", c.total_requirements_user);
+    println!("Verifications (Test): {}", c.total_verifications_test);
+    println!("Verifications (Analysis): {}", c.total_verifications_analysis);
+    println!("Verifications (Inspection): {}", c.total_verifications_inspection);
+    println!("Verifications (Demonstration): {}", c.total_verifications_demonstration);
+    println!();
+    println!("⚠️  Missing Relations:");
     println!("Requirements not verified: {}", c.requirements_not_verified);
     println!("Requirements not satisfied: {}", c.requirements_not_satisfied);
 }
@@ -502,7 +577,7 @@ impl CoverageReport {
     }
 }
 
-pub fn generate_coverage_report(registry: &ElementRegistry) -> CoverageReport {
+pub fn generate_coverage_report(registry: &GraphRegistry) -> CoverageReport {
     let mut total_verifications = 0;
     let mut total_satisfied = 0;
     let mut verification_types = VerificationTypeCounts {
@@ -516,7 +591,7 @@ pub fn generate_coverage_report(registry: &ElementRegistry) -> CoverageReport {
     let mut unsatisfied_files: HashMap<String, Vec<VerificationDetails>> = HashMap::new();
     
     // Analyze all verification elements
-    for element in registry.elements.values() {
+    for element in registry.get_all_elements() {
         if let element::ElementType::Verification(verification_type) = &element.element_type {
             total_verifications += 1;
             

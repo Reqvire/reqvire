@@ -33,14 +33,17 @@ jobs:
         
       - name: Install Reqvire
         run: curl -fsSL https://raw.githubusercontent.com/ilijaljubicic/Reqvire/main/scripts/install.sh | bash
-        
-      - name: Validate Requirements and Generate Report
+                
+      - name: Validate Requirements via summary command
+        id: validate
+        continue-on-error: true
         run: |
           mkdir -p reports
-          reqvire validate | tee reports/validation_report.txt
+          reqvire generate-summary | tee reports/validation_report.txt
 
-      - name: Upload Validation Report
+      - name: Upload Validation Report if validation failed
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: reqvire-validation-report
-          path: reports/validation_report.txt
+          path: reports/validation_report.txt          

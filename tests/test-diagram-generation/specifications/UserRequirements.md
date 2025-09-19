@@ -3,6 +3,7 @@
 This is a test user requirements document for diagram generation.
 
 ## User Interface Requirements
+
 ```mermaid
 graph TD;
   %% Graph styling
@@ -19,20 +20,28 @@ graph TD;
   class 845c8ddc18 requirement;
 ```
 
+### Main User Interface Requirement
+
+This is the main user interface requirement that defines overall UI behavior.
+
+#### Metadata
+  * type: user-requirement
 
 ### UI Element 1
 
 First user interface requirement.
 
 #### Relations
-  * refine: [SystemRequirements.md/System Element 1](SystemRequirements.html#system-element-1)
+  * derivedFrom: [Main User Interface Requirement](#main-user-interface-requirement)
+  * refinedBy: [SystemRequirements.md#system-element-1](SystemRequirements.md#system-element-1)
 
 ### UI Element 2
 
 Second user interface requirement.
 
 #### Relations
-  * refine: [SystemRequirements.md/System Element 2](SystemRequirements.html#system-element-2)
+  * derivedFrom: [Main User Interface Requirement](#main-user-interface-requirement)
+  * refinedBy: [SystemRequirements.md#system-element-2](SystemRequirements.md#system-element-2)
 
 ## Performance Requirements
 ```mermaid
@@ -57,8 +66,11 @@ graph TD;
 First performance requirement.
 
 #### Relations
-  * trace: [UI Element 1](#ui-element-1)
+  * derivedFrom: [UI Element 1](#ui-element-1)
 
 ### Performance Element 2
 
-Second performance requirement with no relations.
+Second performance requirement.
+
+#### Relations
+  * derivedFrom: [UI Element 2](#ui-element-2)

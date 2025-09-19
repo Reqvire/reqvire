@@ -29,7 +29,7 @@ git add Requirements.md > /dev/null 2>&1
 git commit -m "Initial commit" > /dev/null 2>&1
 
 
-OUTPUT=$(cd "$TMP_DIR" && "$REQVIRE_BIN"  --config "${TMP_DIR}/reqvire.yaml"  validate --json 2>&1)
+OUTPUT=$(cd "$TMP_DIR" && "$REQVIRE_BIN"  --config "${TMP_DIR}/reqvire.yaml"  model-summary --json 2>&1)
 EXIT_CODE=$?
 
 
@@ -42,9 +42,10 @@ if [ $EXIT_CODE -ne 0 ]; then
   exit 1
 fi
 
-# Verify that successful validation message is displayed
-if ! echo "$OUTPUT" | grep -q "Validation completed successfully with no errors."; then
-  echo "FAILED: Missing success message for relation validation"
+# Verify that JSON output is valid (indicates successful validation)
+if ! echo "$OUTPUT" | jq . > /dev/null 2>&1; then
+  echo "FAILED: Invalid JSON output, validation likely failed"
+  echo "Output: $OUTPUT"
   exit 1
 fi
 

@@ -2,6 +2,15 @@
 
 This is a requirements document specifically created for testing diagram generation.
 
+## Root Requirements
+
+### Root Requirement
+
+This is the root requirement for testing purposes.
+
+#### Metadata
+  * type: user-requirement
+
 ## Section 1
 ```mermaid
 graph TD;
@@ -29,15 +38,16 @@ graph TD;
 This is a test element with relations.
 
 #### Relations
-  * satisfies: [Element 2](#element-2)
-  * verifies: [Element 3](#element-3)
+  * derivedFrom: [Root Requirement](#root-requirement)
+  * derive: [Element 2](#element-2)
+  * contain: [Element 3](#element-3)
 
 ### Element 2
 
 This is another test element with relations.
 
 #### Relations
-  * tracedFrom: [Element 1](#element-1)
+  * derivedFrom: [Element 1](#element-1)
 
 ## Custom Mermaid Diagram Section
 
@@ -79,8 +89,11 @@ graph TD;
 This is a third test element.
 
 #### Relations
-  * verifiedBy: [Element 1](#element-1)
+  * containedBy: [Element 1](#element-1)
 
 ### Element 4
 
-This is a fourth test element with no relations.
+This is a fourth test element with relations.
+
+#### Relations
+  * derivedFrom: [Element 3](#element-3)

@@ -98,5 +98,8 @@ pub enum ReqvireError {
     #[error("Location already exists: {0}")]
     LocationAlreadyExists(String),
 
+    #[allow(dead_code)]
+    #[error("Validation failed with {} errors", .0.len())]
+    ValidationError(Vec<ReqvireError>),
 
 }

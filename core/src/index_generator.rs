@@ -1,6 +1,6 @@
 use std::path::{PathBuf, Path};
 use std::collections::HashMap;
-use crate::element_registry::ElementRegistry;
+use crate::graph_registry::GraphRegistry;
 use crate::element::Element;
 use crate::filesystem::write_file; 
 use crate::error::ReqvireError;
@@ -9,7 +9,7 @@ use crate::git_commands;
 
 /// Generates a SpecificationsIndex.md index from the existing element registry
 pub fn generate_readme_index(
-    registry: &ElementRegistry, 
+    registry: &GraphRegistry, 
     _output_folder: &PathBuf
 ) -> Result<String, ReqvireError> {
     let mut index_content = String::from("# Specification Index\n\n");

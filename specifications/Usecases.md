@@ -13,12 +13,14 @@ flowchart LR
     subgraph "ReqvireTool"
         subgraph "Cli"
             manageModel((Manage MBSE Model))
-            generateDiagrams((Generate Diagrams))
+            generateDiagrams((Generate/Remove Diagrams))
             analiseRelations((Analyze Relations))
             reports[Provide Reports]
             validateStructure((Validate Structure))			
             filesStructure[Filesystem Structure]
             markdownSucture[Markdown Structure]
+            modelStructure[Model Structure]
+            reports[Reports]
             traceability((Generate Traceability Matrix))
             handleDiffs((Trace Changes))        
         end                   
@@ -62,7 +64,8 @@ flowchart LR
     manageModel -. provide .-> validateStructure
     validateStructure -. include .-> markdownSucture
     validateStructure -. include .-> filesStructure  
-    validateStructure -. include .-> reports    
+    validateStructure -. include .-> modelStructure   
+    validateStructure -. include .-> reports
 
     manageModel -. provide .-> traceability
     manageModel -. provide .-> analiseRelations
@@ -70,7 +73,7 @@ flowchart LR
     manageModel -. provide .-> generateDiagrams
     manageModel -. provide .-> handleDiffs
 
-    aiAgents -. have access to .-> manageModel    
+    aiAgents -. uses MCP server to .-> manageModel    
 
     aiAgents -. assist in development .-> developedSystem
     aiAgents -. commit code changes .-> gitRepository
@@ -101,9 +104,6 @@ flowchart LR
     %% SOI Feedback Loop
     developedSystem -. feedback .-> model
 
-
-
-
 ```
 
 ## Explanation of Reqvire Use Case Diagram
@@ -115,8 +115,10 @@ This diagram outlines the core interactions, components, and workflows of the **
 
 The central component of the system, which facilitates various MBSE-related activities. It consists of two primary submodules:
 
-#### Cli (Command Line Interface)
-- Manage MBSE Model: Core functionality to handle the MBSE model lifecycle.
+#### Tool Interfaces
+
+Tool interfaces are **CLI** (Command Line Interface) and **MCP** (Model Context Protocol) server:
+- Manage MBSE Model: Core functionality to handle the MBSE model lifecycle including refactoring model.
 - Generate Diagrams: Allows users to generate visual representations of the system model.
  - Diagrams can be generated for different viewpoints.
 - Analyze Relations: Provides tools to analyze relationships and dependencies within the model.
@@ -124,6 +126,7 @@ The central component of the system, which facilitates various MBSE-related acti
 - Validate Structure: Ensures the model adheres to defined structure and guidelines:
   - Markdown Structure: Verifies the correctness of the Markdown-based requirements and documentation.
   - Filesystem Structure: Validates the file organization in the project.
+  - Model Structure: Validates model relations and semantics.
 - Generate Traceability Matrix: Produces matrices to link requirements to related elements.
 - Trace Changes
   - Tracks changes and display/visualize affected elements based on relations.
@@ -166,6 +169,7 @@ These features allow teams to seamlessly integrate MBSE practices into their dev
 Humans interact with Reqvire tools to manage, refine, and validate MBSE models, as well as to collaborate effectively within development workflows:
 - Via CLI: Users leverage Reqvire’s CLI to perform tasks such as managing models, generating diagrams, analyzing relationships, and validating structures.
 - Via AI Agents: Users interact with AI agents to receive intelligent suggestions, review potential improvements, and approve changes, ensuring a human-in-the-loop approach.
+  - AI agents may laverage Reqvire’s MCP server or consume model directly from the filesystem.
 - Collaboration: Users integrate Reqvire into agile workflows by collaborating through GitHub or similar platforms to manage repositories, track changes, and maintain traceability.
 
 

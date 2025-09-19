@@ -116,11 +116,8 @@ Read specifications in [../specifications/SpecificationsRequirements.md](../spec
 
 ## Validation
 
-Performs comprehensive validation:
-
-```bash
-reqvire validate
-```
+Any functional require command that needs to parse model will as a first step perform model validation and report any errors found.
+Errors must be fixed before command can execute.
 
 ## Linting
 
@@ -223,6 +220,14 @@ reqvire generate-diagrams
 
 This creates Mermaid diagrams within your requirements files.
 
+### Remove Diagrams
+
+```bash
+reqvire remove-diagrams
+```
+
+This removes Mermaid diagrams within your requirements files. It is suggested to remove diagrams before using AI/LLM-s to reason about model to reduce context lenght.
+
 
 ## GitHub Integration
 
@@ -263,16 +268,19 @@ jobs:
       - name: Install Reqvire
         run: curl -fsSL https://raw.githubusercontent.com/Reqvire/reqvire/main/scripts/install.sh | bash
         
-      - name: Validate Requirements and Generate Report
+      - name: Validate requirements and generate report
+        id: validate
+        continue-on-error: true
         run: |
           mkdir -p reports
-          reqvire validate | tee reports/validation_report.txt
+          reqvire generate-summary | tee reports/validation_report.txt
 
-      - name: Upload Validation Report
+      - name: Upload Validation Report if validation failed
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: reqvire-validation-report
-          path: reports/validation_report.txt
+          path: reports/validation_report.txt          
 ```
 
 #### Automated Diagram Generation

@@ -17,6 +17,9 @@ This is a main requirement that should be ignored when processing only the submo
 
 This is the main system requirement.
 
+#### Metadata
+  * type: user-requirement
+
 #### Relations
   * contain: [Main Requirement One](#main-requirement-one)
 

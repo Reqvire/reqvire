@@ -12,44 +12,30 @@ Feature Branch → Main Branch (via PR) → Tag from Main → GitHub Actions Rel
 
 ## Step-by-Step Release Process
 
-### 1. Version Update (on Feature Branch)
+### 1. Automated Release Preparation
 
-Create a feature branch for the version update:
-
-```bash
-# Create release branch
-git checkout -b release/v0.3.1
-
-# Update version (patch/minor/major)
-make update-patch    # 0.3.0 → 0.3.1
-make update-minor    # 0.3.0 → 0.4.0  
-make update-major    # 0.3.0 → 1.0.0
-
-# Commit version changes with Cargo.lock update
-make version-commit
-```
-
-**What `make version-commit` does:**
-- Updates `Cargo.lock` (resolves CI `--locked` conflicts)
-- Builds and tests the project for verification
-- Commits version changes to current branch
-- Pushes branch to origin
-- Provides next step instructions
-
-### 2. Create Pull Request
-
-Create a PR to merge the version update into main:
+Use the automated commands that handle everything up to PR merge:
 
 ```bash
-# Using GitHub CLI
-gh pr create --base main --head release/v0.3.1 \
-  --title "Update version to v0.3.1" \
-  --body "Version bump for release v0.3.1"
+# Automated release preparation (choose one)
+make release-patch    # 0.3.7 → 0.3.8
+make release-minor    # 0.3.7 → 0.4.0
+make release-major    # 0.3.7 → 1.0.0
 ```
+
+**What the automated commands do:**
+- Create release branch (e.g., `release/v0.3.8`)
+- Update version in `Cargo.toml`
+- Update `Cargo.lock` (resolves CI `--locked` conflicts)
+- Build and test the project for verification
+- Commit version changes to release branch
+- Push branch to origin
+- Create pull request automatically (if GitHub CLI available)
+- Provide clear next steps
 
 **Review and merge the PR** to bring the new version into the main branch.
 
-### 3. Create Release
+### 2. Create Release
 
 After the PR is merged, create the release directly from main:
 
@@ -69,7 +55,7 @@ make release
 - Pushes tag to GitHub
 - **Triggers GitHub Actions for automated release**
 
-### 4. Automated Steps (GitHub Actions)
+### 3. Automated Steps (GitHub Actions)
 
 When a tag is pushed, GitHub Actions automatically:
 
@@ -84,11 +70,14 @@ When a tag is pushed, GitHub Actions automatically:
 
 | Command | Description |
 |---------|-------------|
-| `make update-patch` | Increment patch version (0.3.0 → 0.3.1) |
-| `make update-minor` | Increment minor version (0.3.0 → 0.4.0) |
-| `make update-major` | Increment major version (0.3.0 → 1.0.0) |
-| `make version-commit` | Commit version changes on feature branch |
+| `make release-patch` | **Automated patch release** (creates branch, updates version, commits, creates PR) |
+| `make release-minor` | **Automated minor release** (creates branch, updates version, commits, creates PR) |
+| `make release-major` | **Automated major release** (creates branch, updates version, commits, creates PR) |
 | `make release` | Create tag directly from main (triggers release) |
+| `make update-patch` | Increment patch version only (0.3.0 → 0.3.1) |
+| `make update-minor` | Increment minor version only (0.3.0 → 0.4.0) |
+| `make update-major` | Increment major version only (0.3.0 → 1.0.0) |
+| `make version-commit` | Commit version changes on feature branch |
 | `make prepare-release` | Update Cargo.lock, build, test (standalone) |
 | `make create_tag` | Manual tag creation (backup method) |
 
@@ -138,16 +127,12 @@ After release, verify:
 ## Example Complete Release
 
 ```bash
-# 1. Create release branch and update version
-git checkout -b release/v0.3.1
-make update-patch
-make version-commit
+# 1. Automated release preparation (creates branch, updates version, commits, creates PR)
+make release-patch
 
-# 2. Create and merge PR
-gh pr create --base main --head release/v0.3.1 --title "Update version to v0.3.1"
-# Review and merge PR in GitHub
+# 2. Review and merge PR in GitHub
 
-# 3. Trigger automated release  
+# 3. Trigger automated release
 git checkout main
 git pull origin main
 make release

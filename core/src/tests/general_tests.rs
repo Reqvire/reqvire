@@ -6,7 +6,8 @@ mod general_tests {
 	use predicates::prelude::*;
 
 	use crate::config::Config;
-	use crate::element::{Element, ElementRegistry};
+	use crate::element::Element;
+	use crate::GraphRegistry;
 	use crate::relation::Relation;
 	use crate::markdown;
 	use crate::model::ModelManager;
@@ -35,7 +36,7 @@ mod general_tests {
 
 	#[test]
 	fn test_element_registry() {
-	    let mut registry = ElementRegistry::new();
+	    let mut registry = GraphRegistry::new();
 	    let element1 = Element::new("Element 1".to_string(), "test/path1.md".to_string());
 	    let element2 = Element::new("Element 2".to_string(), "test/path2.md".to_string());
 	    
@@ -120,7 +121,7 @@ This is requirement 2.
 	"###;
 
 	    // Create and populate an element registry
-	    let mut registry = ElementRegistry::new();
+	    let mut registry = GraphRegistry::new();
 	    let elements = markdown::parse_elements(markdown_content, "TestRequirements.md").unwrap();
 	    for element in elements {
 		registry.add_element(element).unwrap();
@@ -135,7 +136,6 @@ This is requirement 2.
 	    ).unwrap();
 	    
 	    // Verify that the result contains a mermaid diagram
-	    dbg!(&result);
 	    assert!(result.contains("```mermaid"));
 	    assert!(result.contains("graph TD;"));
 	    

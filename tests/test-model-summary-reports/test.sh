@@ -21,16 +21,6 @@ set -euo pipefail
 # - Relations coverage: bidirectional relationships are shown (verifiedBy/verify, refine/refinedBy, derivedFrom/derive, etc.)
 # - Filtered relations coverage: relations to filtered-out elements are preserved in both directions
 
-# First validate that all test data is valid before attempting model summary
-VALIDATION_OUTPUT=$(cd "$TEST_DIR" && "$REQVIRE_BIN" --config "$TEST_DIR/reqvire.yaml" validate 2>&1)
-VALIDATION_EXIT_CODE=$?
-
-if [ $VALIDATION_EXIT_CODE -ne 0 ]; then
-  echo "❌ FAILED: Test data validation failed. Fix test data before running model summary:"
-  echo "$VALIDATION_OUTPUT"
-  exit 1
-fi
-
 # 1) No filters: base JSON summary
 OUTPUT=$(cd "$TEST_DIR" && "$REQVIRE_BIN" --config "${TEST_DIR}/reqvire.yaml" model-summary --json 2>&1)
 printf "%s\n" "$OUTPUT" > "${TEST_DIR}/test_results.log"
@@ -50,6 +40,68 @@ TOTAL=$(echo "$OUTPUT" | jq '.global_counters.total_elements')
 if [ "$TOTAL" -ne 5 ]; then
   echo "FAILED: expected 5 elements in JSON, got $TOTAL"
   exit 1
+fi
+
+# Enhanced JSON structure verification - Test new features
+
+# Check that global counters include the new count fields
+if ! echo "$OUTPUT" | jq -e '.global_counters.total_files' >/dev/null; then
+  echo "FAILED: JSON missing total_files in global_counters"
+  exit 1
+fi
+
+if ! echo "$OUTPUT" | jq -e '.global_counters.total_sections' >/dev/null; then
+  echo "FAILED: JSON missing total_sections in global_counters"
+  exit 1
+fi
+
+# Check that file summaries include the new count fields
+FIRST_FILE=$(echo "$OUTPUT" | jq -r '.files | keys[0]')
+if ! echo "$OUTPUT" | jq -e ".files[\"$FIRST_FILE\"].total_sections" >/dev/null; then
+  echo "FAILED: JSON missing total_sections in file summaries"
+  exit 1
+fi
+
+if ! echo "$OUTPUT" | jq -e ".files[\"$FIRST_FILE\"].total_elements" >/dev/null; then
+  echo "FAILED: JSON missing total_elements in file summaries"
+  exit 1
+fi
+
+# Check that section summaries include element_count field
+FIRST_SECTION=$(echo "$OUTPUT" | jq -r ".files[\"$FIRST_FILE\"].sections | keys[0]")
+if ! echo "$OUTPUT" | jq -e ".files[\"$FIRST_FILE\"].sections[\"$FIRST_SECTION\"].element_count" >/dev/null; then
+  echo "FAILED: JSON missing element_count in section summaries"
+  exit 1
+fi
+
+# Test page content with mermaid diagrams
+REQUIREMENTS_FILE="specifications/Requirements.md"
+if echo "$OUTPUT" | jq -e ".files[\"$REQUIREMENTS_FILE\"].page_content" >/dev/null; then
+  PAGE_CONTENT=$(echo "$OUTPUT" | jq -r ".files[\"$REQUIREMENTS_FILE\"].page_content")
+  if [[ ! "$PAGE_CONTENT" == *"mermaid"* ]]; then
+    echo "FAILED: Page content should include mermaid diagram"
+    exit 1
+  fi
+  if [[ ! "$PAGE_CONTENT" == *"graph TD"* ]]; then
+    echo "FAILED: Page content should include the test mermaid diagram content"
+    exit 1
+  fi
+fi
+
+# Test section content with mermaid diagrams
+REQUIREMENTS_SECTION="Requirements A"
+if echo "$OUTPUT" | jq -e ".files[\"$REQUIREMENTS_FILE\"].sections[\"$REQUIREMENTS_SECTION\"].section_content" >/dev/null; then
+  SECTION_CONTENT=$(echo "$OUTPUT" | jq -r ".files[\"$REQUIREMENTS_FILE\"].sections[\"$REQUIREMENTS_SECTION\"].section_content")
+  if [[ ! "$SECTION_CONTENT" == *"mermaid"* ]]; then
+    echo "FAILED: Section content should include mermaid diagram"
+    exit 1
+  fi
+  if [[ ! "$SECTION_CONTENT" == *"flowchart LR"* ]]; then
+    echo "FAILED: Section content should include the test mermaid diagram content"
+    exit 1
+  fi
+else
+  echo "Warning: Section content not found for Requirements A"
 fi
 
 
@@ -87,6 +139,49 @@ for KEY in \
     exit 1
   fi
 done
+
+# Enhanced content and counts verification - Test new features
+
+# Check file counts format in text output
+if ! grep -q '^📂 File:.* (sections: [0-9]*, elements: [0-9]*)' <<< "$OUTPUT"; then
+  echo "FAILED: text summary missing file counts format"
+  exit 1
+fi
+
+# Check section counts format in text output
+if ! grep -q '^  📖 Section:.* (elements: [0-9]*)' <<< "$OUTPUT"; then
+  echo "FAILED: text summary missing section counts format"
+  exit 1
+fi
+
+# Check that global summary includes the new counts
+if ! grep -q 'Total files:' <<< "$OUTPUT"; then
+  echo "FAILED: text summary missing total files count"
+  exit 1
+fi
+
+if ! grep -q 'Total sections:' <<< "$OUTPUT"; then
+  echo "FAILED: text summary missing total sections count"
+  exit 1
+fi
+
+# Test page content display in text format with debug formatting
+if grep -q '📄 Page content:' <<< "$OUTPUT"; then
+  # Verify that page content includes mermaid diagrams with \n formatting
+  if ! grep -A5 '📄 Page content:' <<< "$OUTPUT" | grep -q '\\n'; then
+    echo "FAILED: Page content should use debug format with \\n newlines"
+    exit 1
+  fi
+fi
+
+# Test section content display in text format with debug formatting
+if grep -q '📝 Section content:' <<< "$OUTPUT"; then
+  # Verify that section content includes mermaid diagrams with \n formatting
+  if ! grep -A5 '📝 Section content:' <<< "$OUTPUT" | grep -q '\\n'; then
+    echo "FAILED: Section content should use debug format with \\n newlines"
+    exit 1
+  fi
+fi
 
 
 

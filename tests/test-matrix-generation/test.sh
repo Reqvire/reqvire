@@ -12,16 +12,6 @@
 # Test 1: Generate markdown traceability matrix
 
 MATRIX_MD="${TEST_DIR}/output/matrix.md"
-# First validate that all test data is valid before attempting matrix generation
-VALIDATION_OUTPUT=$(cd "$TEST_DIR" && "$REQVIRE_BIN" --config "$TEST_DIR/reqvire.yaml" validate 2>&1)
-VALIDATION_EXIT_CODE=$?
-
-if [ $VALIDATION_EXIT_CODE -ne 0 ]; then
-  echo "❌ FAILED: Test data validation failed. Fix test data before running matrix generation:"
-  echo "$VALIDATION_OUTPUT"
-  exit 1
-fi
-
 OUTPUT=$(cd "$TEST_DIR" && "$REQVIRE_BIN" --config "${TEST_DIR}/reqvire.yaml" traces 2>&1)
 EXIT_CODE=$?
 

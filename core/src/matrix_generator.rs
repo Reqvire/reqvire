@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 use serde_json::{json};
-use crate::element_registry::ElementRegistry;
+use crate::graph_registry::GraphRegistry;
 use crate::element::{Element, ElementType};
 use crate::relation::{LinkType, RELATION_TYPES};
 use crate::git_commands;
@@ -45,7 +45,7 @@ impl Default for MatrixConfig {
 
 /// Generates a traceability matrix based on the provided configuration
 pub fn generate_matrix(
-    registry: &ElementRegistry,
+    registry: &GraphRegistry,
     config: &MatrixConfig,
     format: MatrixFormat,    
 ) -> String {
@@ -75,7 +75,7 @@ pub fn generate_matrix(
         for relation in &source.relations {
             if config.relation_types.contains(&relation.relation_type.name) {
                 if let LinkType::Identifier(target_id) = &relation.target.link {
-                    if let Ok(target) = registry.get_element(target_id) {
+                    if let Some(target) = registry.get_element(target_id) {
                         if config.target_types.contains(&target.element_type) {
                             targets.insert(target_id.clone());
                         }
@@ -235,7 +235,7 @@ fn generate_markdown_matrix(
     source_elements: &[&Element],
     target_elements: &[&Element],
     relation_types: &[&str],
-    registry: &ElementRegistry,
+    registry: &GraphRegistry,
     base_url: &str,
     commit_hash: &str,
 ) -> String {
@@ -278,20 +278,26 @@ fn generate_markdown_matrix(
         root_ids.sort();
 
         for root_id in &root_ids {
-            if let Ok(root) = registry.get_element(root_id) {
-                output.push_str(&format!("## {}\n\n", root.name));
-                if let Some(group_elements) = requirements_by_root.get(root_id) {
+            output.push_str(&format!("## {} Requirements\n\n", root_id));
+            if let Some(group_elements) = requirements_by_root.get(root_id) {
+                // Only include source elements (requirements) in each group
+                let group_source_elements: Vec<&Element> = group_elements.iter()
+                    .filter(|elem| source_elements.iter().any(|src| src.identifier == elem.identifier))
+                    .cloned()
+                    .collect();
+
+                if !group_source_elements.is_empty() {
                     generate_matrix_table(
                         &sorted_target_elements,
-                        group_elements,
+                        &group_source_elements,
                         matrix_data,
                         &mut output,
                         base_url,
                         commit_hash,
                     );
                 }
-                output.push_str("\n");
             }
+            output.push_str("\n");
         }
     }
 
@@ -568,12 +574,12 @@ mod tests {
     use super::*;
     use crate::element::{Element, ElementType, RequirementType, VerificationType};
     use crate::relation::{Relation, RelationTarget};
-    use crate::element_registry::ElementRegistry;
+    use crate::graph_registry::GraphRegistry;
     use crate::relation::LinkType;
     use crate::matrix_generator::{generate_matrix, MatrixConfig, MatrixFormat};
 
-    fn create_mock_registry() -> ElementRegistry {
-        let mut registry = ElementRegistry::new();
+    fn create_mock_registry() -> GraphRegistry {
+        let mut registry = GraphRegistry::new();
 
 
         let relation_type = RELATION_TYPES.get("verifiedBy").unwrap();
@@ -647,6 +653,9 @@ mod tests {
         registry.register_element(req2, "reqs/REQ-002").unwrap();
         registry.register_element(ver1, "tests/TEST-001").unwrap();
 
+        // Build relations for the matrix generator to work
+        let _ = registry.build_relations(&globset::GlobSet::empty());
+
         registry
     }
 
@@ -655,6 +664,7 @@ mod tests {
         let registry = create_mock_registry();
         let config = MatrixConfig::default();
         let output = generate_matrix(&registry, &config, MatrixFormat::Markdown);
+
 
         assert!(output.contains("Traceability Matrix"));
         assert!(output.contains("REQ-001"));

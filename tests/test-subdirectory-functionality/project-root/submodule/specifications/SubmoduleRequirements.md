@@ -17,6 +17,9 @@ This is a submodule requirement that should be processed when run from the submo
 
 This is the submodule system requirement.
 
+#### Metadata
+  * type: user-requirement
+
 #### Relations
   * contain: [Submodule Requirement One](#submodule-requirement-one)
 

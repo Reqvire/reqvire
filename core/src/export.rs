@@ -7,7 +7,7 @@ use std::io::Write;
 
 use crate::error::ReqvireError;
 use crate::html_export;
-use crate::element_registry::ElementRegistry;
+use crate::graph_registry::GraphRegistry;
 
 
 fn prepare_output_folder(output_folder: &Path) -> std::io::Result<()> {
@@ -30,7 +30,7 @@ fn prepare_output_folder(output_folder: &Path) -> std::io::Result<()> {
 
 /// Converts Markdown → HTML *and* copies all registry-internal files into `output_folder`.
 pub fn export_model(
-    registry: &ElementRegistry,
+    registry: &GraphRegistry,
     output_folder: &Path,
 ) -> Result<usize, ReqvireError> {
 

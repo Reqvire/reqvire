@@ -1,5 +1,4 @@
 pub mod model;
-pub mod element_registry;
 pub mod element;
 pub mod relation;
 pub mod error;
@@ -21,7 +20,6 @@ pub mod graph_registry;
 
 // Re-export commonly used modules
 pub use crate::model::ModelManager;
-pub use crate::element_registry::ElementRegistry;
 pub use crate::element::Element;
 pub use crate::relation::Relation;
 pub use crate::error::ReqvireError;

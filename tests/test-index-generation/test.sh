@@ -22,16 +22,6 @@ pushd "$TEST_DIR" > /dev/null 2>&1
 git init > /dev/null 2>&1
 popd > /dev/null 2>&1
 
-# First validate that all test data is valid before attempting index generation
-VALIDATION_OUTPUT=$(cd "$TEST_DIR" && "$REQVIRE_BIN" --config "$TEST_DIR/reqvire.yaml" validate 2>&1)
-VALIDATION_EXIT_CODE=$?
-
-if [ $VALIDATION_EXIT_CODE -ne 0 ]; then
-  echo "❌ FAILED: Test data validation failed. Fix test data before running index generation:"
-  echo "$VALIDATION_OUTPUT"
-  exit 1
-fi
-
 # Run reqvire with generate-index flag
 OUTPUT=$(cd "${TEST_DIR}" && "$REQVIRE_BIN" --config "${TEST_DIR}/reqvire.yaml" generate-index 2>&1)
 EXIT_CODE=$?

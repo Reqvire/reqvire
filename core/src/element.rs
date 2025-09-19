@@ -121,6 +121,9 @@ pub struct Element {
     pub hash_impact_content: String,
     //
     pub changed_since_commit: bool,
+    //
+    // Order index within the section (used for preserving original order)
+    pub section_order_index: usize,
 }
 
 
@@ -135,9 +138,10 @@ impl Element {
             relations: vec![],
             identifier: identifier.to_string(),
             file_path: file_path.to_string(),
-            element_type: element_type.unwrap_or(ElementType::Requirement(RequirementType::System)), 
+            element_type: element_type.unwrap_or(ElementType::Requirement(RequirementType::System)),
             metadata: HashMap::new(),
             changed_since_commit: false,
+            section_order_index: 0, // Will be set during parsing
         }
     }
 
@@ -174,7 +178,7 @@ impl Element {
             None => "".to_string(),
         }
     }
-    
-     
-    
+
+
+
 }

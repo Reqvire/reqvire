@@ -27,6 +27,9 @@ graph TD;
 
 This is a parent element that should be included in child section diagrams.
 
+#### Metadata
+  * type: user-requirement
+
 #### Relations
   * contain: [Child Element](#child-element)
   * derive: [Derived Child](#derived-child)
@@ -94,7 +97,6 @@ This verification element tests the child element.
 
 #### Relations
   * verify: [Child Element](#child-element)
-  * trace: [Parent Element](#parent-element)
 
 ### Refined Element
 

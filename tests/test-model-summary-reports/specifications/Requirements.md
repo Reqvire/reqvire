@@ -2,6 +2,16 @@
 
 This document contains correctly formatted relations to existing targets, to verify validation passes.
 
+This is page frontmatter content that should appear in the model summary.
+
+```mermaid
+graph TD;
+    A[Start] --> B[Process];
+    B --> C[End];
+```
+
+Additional page content to test mermaid diagram inclusion in page summaries.
+
 ## Verifictions
 
 ### Verification of Standard Relations
@@ -14,6 +24,16 @@ This document contains correctly formatted relations to existing targets, to ver
 
 
 ## Requirements A
+
+This section contains requirements with various relation types for testing.
+
+```mermaid
+flowchart LR;
+    Req1[Requirement 1] --> Req2[Requirement 2];
+    Req2 --> Req3[Requirement 3];
+```
+
+Section introduction content with workflow diagram above.
 
 ### Requirement with Valid Standard Relations
 

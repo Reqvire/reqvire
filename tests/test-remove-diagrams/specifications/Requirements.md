@@ -1,11 +1,6 @@
 # Test Requirements
 
 ## Test Section
----
-
-### Test Requirement
-
-This is a test requirement to verify diagram removal functionality.
 
 Here's a custom diagram that should be preserved:
 
@@ -14,6 +9,15 @@ graph TD;
     A[Custom Diagram] --> B[Should Not Be Removed];
     B --> C[This is User-Created];
 ```
+
+---
+
+### Test Requirement
+
+This is a test requirement to verify diagram removal functionality.
+
+#### Metadata
+  * type: user-requirement
 
 #### Relations
   * verifiedBy: [Test Verification](#test-verification)
@@ -38,5 +42,8 @@ This verification tests the requirement.
 ### Another Requirement
 
 This is another test requirement.
+
+#### Metadata
+  * type: user-requirement
 
 ---

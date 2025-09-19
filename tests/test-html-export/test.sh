@@ -22,16 +22,6 @@
 # - Paths should not have duplicated folder names (e.g., specifications/specifications)
 #
 
-# First validate that all test data is valid before attempting HTML export
-VALIDATION_OUTPUT=$(cd "$TEST_DIR" && "$REQVIRE_BIN" --config "$TEST_DIR/reqvire.yaml" validate 2>&1)
-VALIDATION_EXIT_CODE=$?
-
-if [ $VALIDATION_EXIT_CODE -ne 0 ]; then
-  echo "❌ FAILED: Test data validation failed. Fix test data before running HTML export:"
-  echo "$VALIDATION_OUTPUT"
-  exit 1
-fi
-
 # Generate HTML
 OUTPUT=$(cd "${TEST_DIR}" && "$REQVIRE_BIN" --config "${TEST_DIR}/reqvire.yaml" html --output output 2>&1)
 EXIT_CODE=$?

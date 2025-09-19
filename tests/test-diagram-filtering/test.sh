@@ -31,16 +31,6 @@ EOF
 mkdir -p "$TEST_DIR/backup"
 cp -r "$TEST_DIR/specifications" "$TEST_DIR/backup/"
 
-# First validate that all test data is valid before attempting diagram generation
-VALIDATION_OUTPUT=$(cd "$TEST_DIR" && "$REQVIRE_BIN" --config "$TEST_DIR/reqvire.yaml" validate 2>&1)
-VALIDATION_EXIT_CODE=$?
-
-if [ $VALIDATION_EXIT_CODE -ne 0 ]; then
-  echo "❌ FAILED: Test data validation failed. Fix test data before running diagram generation:"
-  echo "$VALIDATION_OUTPUT"
-  exit 1
-fi
-
 # Run reqvire to generate diagrams
 OUTPUT=$(cd "$TEST_DIR" && "$REQVIRE_BIN" --config "$TEST_DIR/reqvire.yaml" generate-diagrams 2>&1)
 EXIT_CODE=$?
@@ -148,5 +138,8 @@ if [ $FAILED_CHECKS -gt 0 ]; then
   cat "$TEST_FILE"
   exit 1
 fi
+
+# Clean up backup directory
+rm -rf "$TEST_DIR/backup"
 
 exit 0

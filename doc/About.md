@@ -10,6 +10,7 @@ Reqvire enables:
 - Seamless integration into developer workflows via **Git branches**, **pull requests**, and **CI automation**.
 - **AI-friendly** formatting that enables analysis, validation, and augmentation by large language models.
 
+Read about: [Reqvire Usecases](../specifications/Usecaes.md) .
 ---
 
 ## Reqvire Modeling Language
@@ -34,7 +35,7 @@ These documents are written using simple conventions, headers, and embedded tags
 
 Reqvire tooling automatically parses structured Markdown to generate:
 
-- **Architecture diagrams** (component hierarchies, interfaces, dependencies)
+- **Requirements diagrams** (requirements hierarchies, relations and dependencies)
 - **Traceability matrices** linking requirements to architecture, verifications, and tests
 - **Impact reports** showing what was changed, and what it affects
 

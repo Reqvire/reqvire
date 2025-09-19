@@ -13,7 +13,7 @@
 # - Only the file itself should be in the registry for relation validation
 
 
-OUTPUT=$(cd "${TEST_DIR}" && "$REQVIRE_BIN" --config "${TEST_DIR}/reqvire.yaml" validate 2>&1)
+OUTPUT=$(cd "${TEST_DIR}" && "$REQVIRE_BIN" --config "${TEST_DIR}/reqvire.yaml" model-summary 2>&1)
 EXIT_CODE=$?
 
 
